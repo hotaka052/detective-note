@@ -3,10 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+// Fix: Import the Case type.
 import type { Case } from './types';
 
 const STORAGE_KEY = 'detective-app-data';
 
+// Fix: Export the class to make it accessible from other modules.
 export class StorageService {
   static loadCases(): Case[] {
     const data = localStorage.getItem(STORAGE_KEY);
