@@ -9,10 +9,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
     
-    <!-- Load UMD builds of React and ReactDOM -->
-    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-    
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
         /* Custom styles that are difficult with vanilla Tailwind */
@@ -43,7 +39,10 @@
 <script type="importmap">
 {
   "imports": {
-    "react": "https://aistudiocdn.com/react@^19.1.1",
+    "react": "https://esm.sh/react@18.2.0",
+    "react/jsx-runtime": "https://esm.sh/react@18.2.0/jsx-runtime",
+    "react-dom": "https://esm.sh/react-dom@18.2.0",
+    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
     "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
     "react/": "https://aistudiocdn.com/react@^19.1.1/"
   }
@@ -55,12 +54,11 @@
         <!-- React will render the entire application here -->
     </div>
 
-    <!-- Load and transpile all scripts in dependency order -->
-    <script type="text/babel" data-presets="react,typescript" src="types.ts"></script>
-    <script type="text/babel" data-presets="react,typescript" src="storage.ts"></script>
-    <script type="text/babel" data-presets="react,typescript" src="views/NotebookView.tsx"></script>
-    <script type="text/babel" data-presets="react,typescript" src="views/CaseSelectionView.tsx"></script>
-    <script type="text/babel" data-presets="react,typescript" src="App.tsx"></script>
-    <script type="text/babel" data-presets="react,typescript" src="index.tsx"></script>
+    <!-- 
+      Load the application as a single ES module entry point.
+      The `data-type="module"` tells Babel to treat this and its imported files as ES modules.
+      This is the modern approach and fixes the "Cannot use import/export" errors.
+    -->
+    <script type="text/babel" data-presets="react,typescript" data-type="module" src="index.tsx"></script>
 </body>
 </html>

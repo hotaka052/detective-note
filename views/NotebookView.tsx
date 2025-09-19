@@ -5,7 +5,7 @@
 
 // Fix: Import React and required types to conform to module standards.
 import * as React from 'react';
-import type { Case, Note } from '../types';
+import type { Case, Note } from '../types.ts';
 
 const { useState, useEffect, useCallback } = React;
 

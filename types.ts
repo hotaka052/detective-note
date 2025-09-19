@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-interface Note {
+export interface Note {
   id: number;
   content: string;
   x: number;
@@ -11,7 +11,7 @@ interface Note {
   rotation: number;
 }
 
-interface Case {
+export interface Case {
   id: number;
   name: string;
   notes: Note[];

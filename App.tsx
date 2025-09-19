@@ -5,10 +5,10 @@
 
 // Fix: Import React and other dependencies to resolve module-related errors.
 import * as React from 'react';
-import { StorageService } from './storage';
-import type { Case, Note } from './types';
-import { CaseSelectionView } from './views/CaseSelectionView';
-import { NotebookComponent } from './views/NotebookView';
+import { StorageService } from './storage.ts';
+import type { Case, Note } from './types.ts';
+import { CaseSelectionView } from './views/CaseSelectionView.tsx';
+import { NotebookComponent } from './views/NotebookView.tsx';
 
 const { useState, useEffect, useCallback } = React;
 

@@ -4,7 +4,7 @@
  */
 
 // Fix: Import the Case type.
-import type { Case } from './types';
+import type { Case } from './types.ts';
 
 const STORAGE_KEY = 'detective-app-data';
 

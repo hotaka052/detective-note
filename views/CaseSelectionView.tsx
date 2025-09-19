@@ -5,7 +5,7 @@
 
 // Fix: Import React and the Case type to conform to module standards.
 import * as React from 'react';
-import type { Case } from "../types"
+import type { Case } from "../types.ts"
 
 const { useState } = React;
 
