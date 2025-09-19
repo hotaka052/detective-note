@@ -1,0 +1,5 @@
+{
+  "name": "Detective's Notebook",
+  "description": "An app for organizing clues and thoughts like a detective, using sticky notes on a corkboard.",
+  "requestFramePermissions": []
+}
