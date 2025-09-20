@@ -4,7 +4,7 @@
  */
 
 import * as React from 'react';
-import type { Case, PlainUser } from "../types.ts"
+import type { Case, PlainUser } from "../types/index.ts"
 
 const { useState } = React;
 
@@ -14,18 +14,18 @@ type CaseSelectionEvents = {
   onCaseSelect: (caseId: string) => void;
 };
 
-interface CaseSelectionProps {
+type CaseSelectionProps = {
     user: PlainUser;
     onSignOut: () => void;
     cases: Case[];
     events: CaseSelectionEvents;
-}
+};
 
-interface CaseCardProps {
+type CaseCardProps = {
     caseItem: Case;
     onSelect: (id: string) => void;
     onDelete: (id: string) => void;
-}
+};
 
 const CaseCard: React.FC<CaseCardProps> = ({ caseItem, onSelect, onDelete }) => {
     const handleDelete = (e: React.MouseEvent) => {

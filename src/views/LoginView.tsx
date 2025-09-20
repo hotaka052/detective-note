@@ -7,11 +7,11 @@ import * as React from 'react';
 
 const { useState } = React;
 
-interface LoginViewProps {
+type LoginViewProps = {
   onEmailSignIn: (email: string, password: string) => Promise<void>;
   onEmailSignUp: (displayName: string, email: string, password: string) => Promise<void>;
   authError: string | null;
-}
+};
 
 export const LoginView: React.FC<LoginViewProps> = ({ onEmailSignIn, onEmailSignUp, authError }) => {
   const [isSignUp, setIsSignUp] = useState(false);

@@ -4,7 +4,7 @@
  */
 
 import * as React from 'react';
-import type { Case, Note, PlainUser } from '../types.ts';
+import type { Case, Note, PlainUser } from '../types/index.ts';
 
 const { useState, useEffect, useCallback } = React;
 
@@ -15,11 +15,11 @@ type NotebookViewEvents = {
   onBack: () => void;
 };
 
-interface NoteProps {
+type NoteProps = {
   note: Note;
   onMouseDown: (e: React.MouseEvent, note: Note) => void;
   onDelete: (noteId: string) => void;
-}
+};
 
 const NoteComponent: React.FC<NoteProps> = ({ note, onMouseDown, onDelete }) => {
   const handleDelete = (e: React.MouseEvent) => {
@@ -48,12 +48,12 @@ const NoteComponent: React.FC<NoteProps> = ({ note, onMouseDown, onDelete }) => 
   );
 };
 
-interface NotebookProps {
+type NotebookProps = {
   user: PlainUser;
   onSignOut: () => void;
   activeCase: Case;
   events: NotebookViewEvents;
-}
+};
 
 export const NotebookComponent = ({ user, onSignOut, activeCase, events }: NotebookProps) => {
   const [noteInput, setNoteInput] = useState('');

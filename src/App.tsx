@@ -14,8 +14,15 @@ import {
     type AuthError
 } from 'firebase/auth';
 import { auth } from './firebase.ts';
-import { StorageService } from './storage.ts';
-import type { Case, Note, PlainUser } from './types.ts';
+import { 
+    loadCases, 
+    addCase, 
+    deleteCase, 
+    addNote, 
+    deleteNote, 
+    updateNotePosition 
+} from './storage.ts';
+import type { Case, Note, PlainUser } from './types/index.ts';
 import { CaseSelectionView } from './views/CaseSelectionView.tsx';
 import { NotebookComponent } from './views/NotebookView.tsx';
 import { LoginView } from './views/LoginView.tsx';
@@ -62,7 +69,7 @@ export const App = () => {
                     email: currentUser.email,
                 };
                 setUser(plainUser);
-                const userCases = await StorageService.loadCases(currentUser.uid);
+                const userCases = await loadCases(currentUser.uid);
                 setCases(userCases);
             } else {
                 setUser(null);
@@ -111,7 +118,7 @@ export const App = () => {
 
     const handleAddCase = async (name: string) => {
         if (!user) return;
-        const newCase = await StorageService.addCase(user.uid, name);
+        const newCase = await addCase(user.uid, name);
         if (newCase) {
             setCases(prevCases => [...prevCases, newCase]);
         }
@@ -120,7 +127,7 @@ export const App = () => {
     const handleDeleteCase = async (id: string) => {
         if (!user) return;
         if (confirm('この事件ファイルとすべてのメモを完全に削除しますか？')) {
-            await StorageService.deleteCase(user.uid, id);
+            await deleteCase(user.uid, id);
             setCases(prevCases => prevCases.filter(c => c.id !== id));
         }
     };
@@ -147,7 +154,7 @@ export const App = () => {
             rotation: Math.floor(Math.random() * 20) - 10,
         };
 
-        const newNote = await StorageService.addNote(user.uid, activeCase.id, newNoteData);
+        const newNote = await addNote(user.uid, activeCase.id, newNoteData);
         if (newNote) {
             setCases(prevCases => prevCases.map(c =>
                 c.id === activeCaseId ? { ...c, notes: [...c.notes, newNote] } : c
@@ -158,7 +165,7 @@ export const App = () => {
     const handleDeleteNote = async (noteId: string) => {
         const activeCase = getActiveCase();
         if (!user || !activeCase) return;
-        await StorageService.deleteNote(user.uid, activeCase.id, noteId);
+        await deleteNote(user.uid, activeCase.id, noteId);
         setCases(prevCases => prevCases.map(c =>
             c.id === activeCaseId ? { ...c, notes: c.notes.filter(n => n.id !== noteId) } : c
         ));
@@ -167,7 +174,7 @@ export const App = () => {
     const handleUpdateNotePosition = async (noteId: string, x: number, y: number) => {
         const activeCase = getActiveCase();
         if (!user || !activeCase) return;
-        await StorageService.updateNotePosition(user.uid, activeCase.id, noteId, x, y);
+        await updateNotePosition(user.uid, activeCase.id, noteId, x, y);
         setCases(prevCases => prevCases.map(c =>
             c.id === activeCaseId ? { ...c, notes: c.notes.map(n => n.id === noteId ? { ...n, x, y } : n) } : c
         ));
