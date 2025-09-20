@@ -26,31 +26,36 @@ type NoteProps = {
   note: Note;
   onMouseDown: (e: React.MouseEvent, note: Note) => void;
   onDelete: (noteId: string) => void;
+  isReadOnly: boolean;
 };
 
-const NoteComponent: React.FC<NoteProps> = ({ note, onMouseDown, onDelete }) => {
+const NoteComponent: React.FC<NoteProps> = ({ note, onMouseDown, onDelete, isReadOnly }) => {
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     onDelete(note.id);
   };
 
+  const cursorClass = isReadOnly ? 'cursor-default' : 'cursor-move';
+
   return (
     <div
-      className="note torn-paper group absolute w-[250px] min-h-[150px] p-5 bg-[#ffc] shadow-[5px_5px_15px_rgba(0,0,0,0.5)] text-lg cursor-move select-none transition-transform transition-shadow duration-200 ease-out hover:scale-105 hover:shadow-[10px_10px_20px_rgba(0,0,0,0.5)] hover:z-10"
+      className={`note torn-paper group absolute w-[250px] min-h-[150px] p-5 bg-[#ffc] shadow-[5px_5px_15px_rgba(0,0,0,0.5)] text-lg select-none transition-transform transition-shadow duration-200 ease-out ${!isReadOnly ? 'hover:scale-105 hover:shadow-[10px_10px_20px_rgba(0,0,0,0.5)] hover:z-10' : ''} ${cursorClass}`}
       data-id={note.id}
       style={{ left: `${note.x}px`, top: `${note.y}px`, transform: `rotate(${note.rotation}deg)` }}
-      onMouseDown={(e) => onMouseDown(e, note)}
+      onMouseDown={(e) => !isReadOnly && onMouseDown(e, note)}
     >
       <div className="w-full h-full whitespace-pre-wrap break-words">
         {note.content}
       </div>
-      <button
-        className="absolute top-1.5 right-1.5 w-5 h-5 bg-red-500 text-white border-none rounded-full cursor-pointer flex items-center justify-center font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-600"
-        aria-label="Delete note"
-        onClick={handleDelete}
-      >
-        &times;
-      </button>
+      {!isReadOnly && (
+        <button
+          className="absolute top-1.5 right-1.5 w-5 h-5 bg-red-500 text-white border-none rounded-full cursor-pointer flex items-center justify-center font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-600"
+          aria-label="Delete note"
+          onClick={handleDelete}
+        >
+          &times;
+        </button>
+      )}
     </div>
   );
 };
@@ -86,6 +91,7 @@ type NotebookProps = {
   user: PlainUser;
   onSignOut: () => void;
   activeCase: Case;
+  isMember: boolean;
   events: NotebookViewEvents;
   aiState: AiState;
 };
@@ -93,7 +99,7 @@ type NotebookProps = {
 
 type DragState = { noteId: string; offsetX: number; offsetY: number } | null;
 
-export const NotebookComponent = ({ user, onSignOut, activeCase, events, aiState }: NotebookProps) => {
+export const NotebookComponent = ({ user, onSignOut, activeCase, isMember, events, aiState }: NotebookProps) => {
   const [noteInput, setNoteInput] = useState('');
   const [activeDrag, setActiveDrag] = useState<DragState>(null);
   const activeElRef = useRef<HTMLElement | null>(null);
@@ -178,7 +184,7 @@ export const NotebookComponent = ({ user, onSignOut, activeCase, events, aiState
              <button onClick={events.onBack} className="py-2 px-4 border-none bg-transparent text-white font-display text-lg cursor-pointer transition-colors hover:bg-white/10 rounded-md">&larr; ボード一覧へ</button>
           </div>
           <div className="w-1/3 text-center">
-             <h2 className="font-display text-3xl text-shadow truncate" title={activeCase.name}>ボード: {activeCase.name}</h2>
+             <h2 className="font-display text-3xl text-shadow truncate" title={activeCase.bookTitle}>ボード: {activeCase.bookTitle}</h2>
           </div>
           <div className="w-1/3 flex justify-end items-center gap-4">
             <button onClick={() => setIsAiModalOpen(true)} title="AIアシスタント" className="p-2 border-none bg-transparent text-white font-display text-lg cursor-pointer transition-colors hover:bg-white/10 rounded-full">
@@ -188,20 +194,22 @@ export const NotebookComponent = ({ user, onSignOut, activeCase, events, aiState
             <button onClick={onSignOut} className="py-2 px-4 border-none bg-red-600/80 text-white font-display text-base cursor-pointer rounded-md transition-colors hover:bg-red-700/80">ログアウト</button>
           </div>
       </header>
-      <div className="bg-black/50 p-3 text-center shadow-md z-10 shrink-0">
-          <form onSubmit={handleAddNote} className="flex justify-center gap-2.5">
-              <input 
-                  type="text" 
-                  value={noteInput}
-                  onChange={(e) => setNoteInput(e.target.value)}
-                  placeholder="新しい考察..." 
-                  autoComplete="off" 
-                  required 
-                  className="w-[300px] py-2 px-3 border border-gray-300 rounded-md text-base font-body focus:ring-2 focus:ring-[#5a3a22] focus:outline-none text-slate-800"
-              />
-              <button type="submit" className="py-2 px-5 border-none bg-[#5a3a22] text-white font-display text-base cursor-pointer rounded-md transition-colors hover:bg-[#7b5b43]">付箋を追加</button>
-          </form>
-      </div>
+      {isMember && (
+          <div className="bg-black/50 p-3 text-center shadow-md z-10 shrink-0">
+              <form onSubmit={handleAddNote} className="flex justify-center gap-2.5">
+                  <input 
+                      type="text" 
+                      value={noteInput}
+                      onChange={(e) => setNoteInput(e.target.value)}
+                      placeholder="新しい考察..." 
+                      autoComplete="off" 
+                      required 
+                      className="w-[300px] py-2 px-3 border border-gray-300 rounded-md text-base font-body focus:ring-2 focus:ring-[#5a3a22] focus:outline-none text-slate-800"
+                  />
+                  <button type="submit" className="py-2 px-5 border-none bg-[#5a3a22] text-white font-display text-base cursor-pointer rounded-md transition-colors hover:bg-[#7b5b43]">付箋を追加</button>
+              </form>
+          </div>
+      )}
       <main id="notes-container" className="relative flex-grow">
           {activeCase.notes.map(note => (
             <NoteComponent 
@@ -209,12 +217,19 @@ export const NotebookComponent = ({ user, onSignOut, activeCase, events, aiState
                 note={note} 
                 onMouseDown={handleDragStart}
                 onDelete={events.onNoteDelete}
+                isReadOnly={!isMember}
             />
           ))}
           {activeCase.notes.length === 0 && (
              <div className="text-center text-slate-500 mt-10 font-display text-2xl">
-                 <p>まだ付箋がありません。</p>
-                 <p>上のフォームから新しい考察を追加しましょう。</p>
+                 {isMember ? (
+                     <>
+                        <p>まだ付箋がありません。</p>
+                        <p>上のフォームから新しい考察を追加しましょう。</p>
+                     </>
+                 ) : (
+                    <p>このボードにはまだ付箋がありません。</p>
+                 )}
              </div>
           )}
       </main>

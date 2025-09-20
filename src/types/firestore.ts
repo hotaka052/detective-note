@@ -20,7 +20,9 @@ export type Note = {
 // populated from the 'notes' subcollection.
 export type Case = {
   id: string;
-  name: string;
+  bookTitle: string;
+  authorName: string;
+  isPublic: boolean;
   ownerId: string;
   ownerEmail: string;
   memberEmails: string[];

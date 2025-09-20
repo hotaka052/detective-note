@@ -8,9 +8,12 @@ import { GoogleGenAI } from '@google/genai';
 // Fix: Remove modular auth imports as we are using the compat library for authentication.
 import { auth } from './firebase.ts';
 import { 
-    loadCases, 
+    loadCases,
+    loadSingleCase,
+    searchPublicCases,
     addCase, 
     deleteCase,
+    updateCaseVisibility,
     inviteUserToCase,
     removeUserFromCase,
     addNote, 
@@ -52,8 +55,9 @@ const getFriendlyAuthError = (error: any): string => {
 
 export const App = () => {
     const [user, setUser] = useState<PlainUser | null>(null);
-    const [cases, setCases] = useState<Case[]>([]);
-    const [activeCaseId, setActiveCaseId] = useState<string | null>(null);
+    const [myCases, setMyCases] = useState<Case[]>([]);
+    const [publicCases, setPublicCases] = useState<Case[]>([]);
+    const [activeCase, setActiveCase] = useState<Case | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [authError, setAuthError] = useState<string | null>(null);
 
@@ -74,11 +78,12 @@ export const App = () => {
                 };
                 setUser(plainUser);
                 const userCases = await loadCases(currentUser.email);
-                setCases(userCases);
+                setMyCases(userCases);
             } else {
                 setUser(null);
-                setCases([]);
-                setActiveCaseId(null);
+                setMyCases([]);
+                setPublicCases([]);
+                setActiveCase(null);
             }
             setIsLoading(false);
             setAuthError(null); // Clear error on successful auth change
@@ -127,17 +132,17 @@ export const App = () => {
         }
     };
 
-    const handleAddCase = async (name: string) => {
+    const handleAddCase = async (bookTitle: string, authorName: string, isPublic: boolean) => {
         if (!user) return;
-        const newCase = await addCase(user, name);
+        const newCase = await addCase(user, bookTitle, authorName, isPublic);
         if (newCase) {
-            setCases(prevCases => [...prevCases, newCase]);
+            setMyCases(prevCases => [...prevCases, newCase]);
         }
     };
 
     const handleDeleteCase = async (id: string) => {
         if (!user) return;
-        const caseToDelete = cases.find(c => c.id === id);
+        const caseToDelete = myCases.find(c => c.id === id);
         if (!caseToDelete) return;
         if (caseToDelete.ownerId !== user.uid) {
             alert("このボードのオーナーのみが削除できます。");
@@ -146,8 +151,18 @@ export const App = () => {
 
         if (confirm('このボードとすべての付箋を完全に削除しますか？この操作は取り消せません。')) {
             await deleteCase(user.uid, id);
-            setCases(prevCases => prevCases.filter(c => c.id !== id));
+            setMyCases(prevCases => prevCases.filter(c => c.id !== id));
         }
+    };
+
+    const handleUpdateVisibility = async (caseId: string, isPublic: boolean) => {
+        await updateCaseVisibility(caseId, isPublic);
+        setMyCases(prev => prev.map(c => c.id === caseId ? { ...c, isPublic } : c));
+    };
+
+    const handleSearchPublicCases = async (searchTerm: string) => {
+        const results = await searchPublicCases(searchTerm);
+        setPublicCases(results);
     };
 
     const handleInviteUser = async (caseId: string, email: string) => {
@@ -156,27 +171,32 @@ export const App = () => {
             return;
         }
         await inviteUserToCase(caseId, email);
-        setCases(prev => prev.map(c => c.id === caseId ? { ...c, memberEmails: [...c.memberEmails, email] } : c));
+        setMyCases(prev => prev.map(c => c.id === caseId ? { ...c, memberEmails: [...c.memberEmails, email] } : c));
     };
 
     const handleRemoveUser = async (caseId: string, email: string) => {
         await removeUserFromCase(caseId, email);
-        setCases(prev => prev.map(c => c.id === caseId ? { ...c, memberEmails: c.memberEmails.filter(m => m !== email) } : c));
+        setMyCases(prev => prev.map(c => c.id === caseId ? { ...c, memberEmails: c.memberEmails.filter(m => m !== email) } : c));
     };
 
-    const handleSelectCase = (id: string) => setActiveCaseId(id);
+    const handleSelectCase = async (id: string) => {
+        setIsLoading(true);
+        const fullCase = await loadSingleCase(id);
+        if (fullCase) {
+           setActiveCase(fullCase);
+        } else {
+            alert("ボードの読み込みに失敗しました。");
+        }
+        setIsLoading(false);
+    };
+
     const handleBackToCases = () => {
-        setActiveCaseId(null);
+        setActiveCase(null);
         setAiResult(null); // Clear AI result when going back
         setAiError(null);
     };
 
-    const getActiveCase = useCallback(() => {
-        return cases.find(c => c.id === activeCaseId);
-    }, [cases, activeCaseId]);
-
     const handleAddNote = async (content: string) => {
-        const activeCase = getActiveCase();
         if (!user || !activeCase) return;
 
         const notesContainer = document.getElementById('notes-container');
@@ -192,32 +212,29 @@ export const App = () => {
 
         const newNote = await addNote(activeCase.id, newNoteData);
         if (newNote) {
-            setCases(prevCases => prevCases.map(c =>
-                c.id === activeCaseId ? { ...c, notes: [...c.notes, newNote] } : c
-            ));
+            setActiveCase(prev => prev ? { ...prev, notes: [...prev.notes, newNote] } : null);
+            // Also update the note count in the myCases list if it's there
+            setMyCases(prev => prev.map(c => c.id === activeCase.id ? { ...c, notes: [...c.notes, newNote] } : c));
         }
     };
 
     const handleDeleteNote = async (noteId: string) => {
-        const activeCase = getActiveCase();
         if (!user || !activeCase) return;
         await deleteNote(activeCase.id, noteId);
-        setCases(prevCases => prevCases.map(c =>
-            c.id === activeCaseId ? { ...c, notes: c.notes.filter(n => n.id !== noteId) } : c
-        ));
+        const updatedNotes = activeCase.notes.filter(n => n.id !== noteId);
+        setActiveCase(prev => prev ? { ...prev, notes: updatedNotes } : null);
+         // Also update the note count in the myCases list if it's there
+        setMyCases(prev => prev.map(c => c.id === activeCase.id ? { ...c, notes: updatedNotes } : c));
     };
 
     const handleUpdateNotePosition = async (noteId: string, x: number, y: number) => {
-        const activeCase = getActiveCase();
         if (!user || !activeCase) return;
         await updateNotePosition(activeCase.id, noteId, x, y);
-        setCases(prevCases => prevCases.map(c =>
-            c.id === activeCaseId ? { ...c, notes: c.notes.map(n => n.id === noteId ? { ...n, x, y } : n) } : c
-        ));
+        const updatedNotes = activeCase.notes.map(n => n.id === noteId ? { ...n, x, y } : n);
+        setActiveCase(prev => prev ? { ...prev, notes: updatedNotes } : null);
     };
 
     const handleAiAnalysis = async (type: 'characters' | 'timeline' | 'mysteries') => {
-        const activeCase = getActiveCase();
         if (!activeCase || activeCase.notes.length === 0) {
             setAiError("分析する付箋がありません。");
             setAiResult(null);
@@ -269,8 +286,8 @@ export const App = () => {
             authError={authError}
             />;
     }
-
-    const activeCase = getActiveCase();
+    
+    const isMemberOfActiveCase = activeCase ? activeCase.memberEmails.includes(user.email!) : false;
 
     return (
         activeCase ? (
@@ -278,6 +295,7 @@ export const App = () => {
                 user={user}
                 onSignOut={handleSignOut}
                 activeCase={activeCase}
+                isMember={isMemberOfActiveCase}
                 events={{
                     onNoteAdd: handleAddNote,
                     onNoteDelete: handleDeleteNote,
@@ -295,11 +313,14 @@ export const App = () => {
             <CaseSelectionView
                 user={user}
                 onSignOut={handleSignOut}
-                cases={cases}
+                myCases={myCases}
+                publicCases={publicCases}
                 events={{
                     onCaseAdd: handleAddCase,
                     onCaseDelete: handleDeleteCase,
                     onCaseSelect: handleSelectCase,
+                    onUpdateVisibility: handleUpdateVisibility,
+                    onSearchPublic: handleSearchPublicCases,
                     onInviteUser: handleInviteUser,
                     onRemoveUser: handleRemoveUser,
                 }}
