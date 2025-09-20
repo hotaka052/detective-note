@@ -6,9 +6,7 @@
 import * as React from 'react';
 import {
     onAuthStateChanged,
-    signInWithPopup,
     signOut,
-    GoogleAuthProvider,
     type User,
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
@@ -76,17 +74,6 @@ export const App = () => {
         });
         return () => unsubscribe();
     }, []);
-
-    const handleGoogleSignIn = async () => {
-        const provider = new GoogleAuthProvider();
-        try {
-            setAuthError(null);
-            await signInWithPopup(auth, provider);
-        } catch (error) {
-            console.error("Authentication error:", error);
-            setAuthError(getFriendlyAuthError(error as AuthError));
-        }
-    };
 
     const handleEmailSignUp = async (displayName: string, email: string, password: string) => {
         if (!displayName.trim()) {
@@ -192,7 +179,6 @@ export const App = () => {
 
     if (!user) {
         return <LoginView 
-            onGoogleSignIn={handleGoogleSignIn} 
             onEmailSignIn={handleEmailSignIn}
             onEmailSignUp={handleEmailSignUp}
             authError={authError}
