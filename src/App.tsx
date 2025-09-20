@@ -14,8 +14,6 @@ import {
     addCase, 
     deleteCase,
     updateCaseVisibility,
-    inviteUserToCase,
-    removeUserFromCase,
     addNote, 
     deleteNote, 
     updateNotePosition 
@@ -165,20 +163,6 @@ export const App = () => {
         setPublicCases(results);
     };
 
-    const handleInviteUser = async (caseId: string, email: string) => {
-        if (!email.trim() || !/^\S+@\S+\.\S+$/.test(email)) {
-            alert("有効なメールアドレスを入力してください。");
-            return;
-        }
-        await inviteUserToCase(caseId, email);
-        setMyCases(prev => prev.map(c => c.id === caseId ? { ...c, memberEmails: [...c.memberEmails, email] } : c));
-    };
-
-    const handleRemoveUser = async (caseId: string, email: string) => {
-        await removeUserFromCase(caseId, email);
-        setMyCases(prev => prev.map(c => c.id === caseId ? { ...c, memberEmails: c.memberEmails.filter(m => m !== email) } : c));
-    };
-
     const handleSelectCase = async (id: string) => {
         setIsLoading(true);
         const fullCase = await loadSingleCase(id);
@@ -287,7 +271,7 @@ export const App = () => {
             />;
     }
     
-    const isMemberOfActiveCase = activeCase ? activeCase.memberEmails.includes(user.email!) : false;
+    const isOwnerOfActiveCase = activeCase ? activeCase.ownerId === user.uid : false;
 
     return (
         activeCase ? (
@@ -295,7 +279,7 @@ export const App = () => {
                 user={user}
                 onSignOut={handleSignOut}
                 activeCase={activeCase}
-                isMember={isMemberOfActiveCase}
+                isOwner={isOwnerOfActiveCase}
                 events={{
                     onNoteAdd: handleAddNote,
                     onNoteDelete: handleDeleteNote,
@@ -321,8 +305,6 @@ export const App = () => {
                     onCaseSelect: handleSelectCase,
                     onUpdateVisibility: handleUpdateVisibility,
                     onSearchPublic: handleSearchPublicCases,
-                    onInviteUser: handleInviteUser,
-                    onRemoveUser: handleRemoveUser,
                 }}
             />
         )

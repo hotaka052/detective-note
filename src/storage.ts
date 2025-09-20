@@ -4,17 +4,17 @@
  */
 
 import { db } from './firebase.ts';
-import { collection, getDocs, doc, addDoc, updateDoc, deleteDoc, writeBatch, query, where, getDoc, arrayUnion, arrayRemove, limit, orderBy } from 'firebase/firestore';
+import { collection, getDocs, doc, addDoc, updateDoc, deleteDoc, writeBatch, query, where, getDoc, limit, orderBy } from 'firebase/firestore';
 import type { Case, Note, PlainUser } from './types/index.ts';
 
 // Cases are now a top-level collection to facilitate sharing
 const casesCollection = collection(db, 'cases');
 
-// Load cases where the user is a member
+// Load cases where the user is the owner
 export async function loadCases(userEmail: string): Promise<Case[]> {
   if (!userEmail) return [];
   try {
-    const q = query(casesCollection, where("memberEmails", "array-contains", userEmail));
+    const q = query(casesCollection, where("ownerEmail", "==", userEmail));
     const caseSnapshot = await getDocs(q);
     const cases: Case[] = [];
     for (const caseDoc of caseSnapshot.docs) {
@@ -105,7 +105,6 @@ export async function addCase(user: PlainUser, bookTitle: string, authorName: st
       isPublic,
       ownerId: user.uid,
       ownerEmail: user.email,
-      memberEmails: [user.email],
       createdAt: new Date(),
     };
     const docRef = await addDoc(casesCollection, newCaseData);
@@ -149,30 +148,6 @@ export async function deleteCase(userId: string, caseId: string): Promise<void> 
   } catch (e) {
     console.error("Error deleting case from Firestore:", e);
   }
-}
-
-// Add a member to a case
-export async function inviteUserToCase(caseId: string, email: string): Promise<void> {
-    try {
-        const caseDocRef = doc(db, 'cases', caseId);
-        await updateDoc(caseDocRef, {
-            memberEmails: arrayUnion(email)
-        });
-    } catch (e) {
-        console.error("Error inviting user:", e);
-    }
-}
-
-// Remove a member from a case
-export async function removeUserFromCase(caseId: string, email: string): Promise<void> {
-    try {
-        const caseDocRef = doc(db, 'cases', caseId);
-        await updateDoc(caseDocRef, {
-            memberEmails: arrayRemove(email)
-        });
-    } catch (e) {
-        console.error("Error removing user:", e);
-    }
 }
 
 // Note functions now only need caseId, not userId

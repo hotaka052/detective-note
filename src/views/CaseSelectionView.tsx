@@ -14,8 +14,6 @@ type CaseSelectionEvents = {
   onCaseSelect: (caseId: string) => void;
   onUpdateVisibility: (caseId: string, isPublic: boolean) => void;
   onSearchPublic: (searchTerm: string) => void;
-  onInviteUser: (caseId: string, email: string) => void;
-  onRemoveUser: (caseId: string, email: string) => void;
 };
 
 type CaseSelectionProps = {
@@ -26,19 +24,9 @@ type CaseSelectionProps = {
     events: CaseSelectionEvents;
 };
 
-const ShareModal = ({ caseItem, user, events, onClose }: { caseItem: Case, user: PlainUser, events: CaseSelectionEvents, onClose: () => void }) => {
-    const [inviteEmail, setInviteEmail] = useState('');
+const SettingsModal = ({ caseItem, events, onClose }: { caseItem: Case, events: CaseSelectionEvents, onClose: () => void }) => {
     const [isPublic, setIsPublic] = useState(caseItem.isPublic);
-    const isOwner = user.uid === caseItem.ownerId;
 
-    const handleInvite = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (inviteEmail.trim()) {
-            events.onInviteUser(caseItem.id, inviteEmail.trim());
-            setInviteEmail('');
-        }
-    };
-    
     const handleVisibilityToggle = () => {
         const newVisibility = !isPublic;
         setIsPublic(newVisibility);
@@ -48,53 +36,21 @@ const ShareModal = ({ caseItem, user, events, onClose }: { caseItem: Case, user:
     return (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
             <div className="bg-[#f5eeda] text-slate-800 rounded-lg shadow-2xl p-6 w-full max-w-md m-4" onClick={e => e.stopPropagation()}>
-                <h3 className="font-display text-2xl mb-1">共有設定</h3>
+                <h3 className="font-display text-2xl mb-1">ボード設定</h3>
                 <p className="font-body text-sm mb-4 truncate" title={caseItem.bookTitle}>ボード: {caseItem.bookTitle}</p>
                 
-                 {isOwner && (
-                    <div className="mb-4 bg-white/50 p-3 rounded">
-                        <label className="flex items-center justify-between cursor-pointer">
-                            <span className="font-display text-lg">ボードを公開する</span>
-                            <div className="relative">
-                                <input type="checkbox" className="sr-only" checked={isPublic} onChange={handleVisibilityToggle} />
-                                <div className={`block w-14 h-8 rounded-full ${isPublic ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-                                <div className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform ${isPublic ? 'translate-x-6' : ''}`}></div>
-                            </div>
-                        </label>
-                         <p className="text-xs text-gray-600 mt-1">公開すると、他のユーザーがこのボードを検索・閲覧できるようになります。</p>
-                    </div>
-                )}
-
-                {isOwner && (
-                    <form onSubmit={handleInvite} className="flex gap-2 mb-4">
-                        <input
-                            type="email"
-                            value={inviteEmail}
-                            onChange={(e) => setInviteEmail(e.target.value)}
-                            placeholder="招待するメンバーのメールアドレス"
-                            className="flex-grow py-2 px-3 border border-gray-400 rounded-md font-body focus:ring-2 focus:ring-[#5a3a22] focus:outline-none"
-                        />
-                        <button type="submit" className="py-2 px-4 border-none bg-[#5a3a22] text-white font-display text-sm cursor-pointer rounded-md transition-colors hover:bg-[#7b5b43]">招待</button>
-                    </form>
-                )}
-
-                <h4 className="font-display text-lg mt-4 mb-2">考察メンバー</h4>
-                <div className="max-h-60 overflow-y-auto bg-white/50 p-2 rounded">
-                    {caseItem.memberEmails.map(email => (
-                        <div key={email} className="flex items-center justify-between p-2 hover:bg-black/10 rounded">
-                            <span className="font-body truncate" title={email}>{email} {email === caseItem.ownerEmail && '(オーナー)'}</span>
-                            {isOwner && email !== caseItem.ownerEmail && (
-                                <button
-                                    onClick={() => events.onRemoveUser(caseItem.id, email)}
-                                    className="text-red-600 font-bold hover:text-red-800 transition-colors text-xl"
-                                    aria-label={`Remove ${email}`}
-                                >
-                                    &times;
-                                </button>
-                            )}
+                <div className="mb-4 bg-white/50 p-3 rounded">
+                    <label className="flex items-center justify-between cursor-pointer">
+                        <span className="font-display text-lg">ボードを公開する</span>
+                        <div className="relative">
+                            <input type="checkbox" className="sr-only" checked={isPublic} onChange={handleVisibilityToggle} />
+                            <div className={`block w-14 h-8 rounded-full ${isPublic ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                            <div className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform ${isPublic ? 'translate-x-6' : ''}`}></div>
                         </div>
-                    ))}
+                    </label>
+                     <p className="text-xs text-gray-600 mt-1">公開すると、他のユーザーがこのボードを検索・閲覧できるようになります。</p>
                 </div>
+
                 <button onClick={onClose} className="mt-6 w-full py-2 px-5 border-none bg-gray-500 text-white font-display text-base cursor-pointer rounded-md transition-colors hover:bg-gray-600">閉じる</button>
             </div>
         </div>
@@ -102,18 +58,17 @@ const ShareModal = ({ caseItem, user, events, onClose }: { caseItem: Case, user:
 };
 
 
-const CaseCard = ({ caseItem, user, onSelect, onDelete, onShare }: { caseItem: Case, user: PlainUser, onSelect: (id: string) => void, onDelete: (id: string) => void, onShare: (id: string) => void }) => {
+const CaseCard = ({ caseItem, user, onSelect, onDelete, onSettings }: { caseItem: Case, user: PlainUser, onSelect: (id: string) => void, onDelete: (id: string) => void, onSettings: (id: string) => void }) => {
     const isOwner = user.uid === caseItem.ownerId;
-    const isMember = caseItem.memberEmails.includes(user.email!);
     
     const handleDelete = (e: React.MouseEvent) => {
         e.stopPropagation();
         onDelete(caseItem.id);
     };
     
-    const handleShare = (e: React.MouseEvent) => {
+    const handleSettings = (e: React.MouseEvent) => {
         e.stopPropagation();
-        onShare(caseItem.id);
+        onSettings(caseItem.id);
     };
 
     return (
@@ -130,27 +85,22 @@ const CaseCard = ({ caseItem, user, onSelect, onDelete, onShare }: { caseItem: C
               <p className="text-xs text-gray-600 font-body mb-2 truncate">オーナー: {caseItem.ownerEmail === user.email ? 'あなた' : caseItem.ownerEmail}</p>
             </div>
             <div className="flex justify-between items-center mt-4">
-                <div className="flex items-center gap-4">
-                    <span className="text-sm text-gray-600">{`付箋: ${caseItem.notes.length}枚`}</span>
-                    {caseItem.memberEmails.length > 1 && (
-                      <div className="flex items-center gap-1 text-sm text-gray-600" title={caseItem.memberEmails.join(', ')}>
-                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" /></svg>
-                         <span>{caseItem.memberEmails.length}</span>
-                      </div>
-                    )}
-                </div>
+                <span className="text-sm text-gray-600">{`付箋: ${caseItem.notes.length}枚`}</span>
                 <div className="flex items-center gap-1">
-                    {isMember && (
-                      <button onClick={handleShare} className="text-blue-600 hover:text-blue-800 transition-colors p-1 rounded-full" aria-label={`Share case ${caseItem.bookTitle}`}>
-                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12s-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" /></svg>
-                      </button>
-                    )}
                     {isOwner && (
+                      <>
+                        <button onClick={handleSettings} className="text-gray-600 hover:text-black transition-colors p-1 rounded-full" aria-label={`Settings for ${caseItem.bookTitle}`}>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                        </button>
                         <button
                             onClick={handleDelete}
                             className="text-red-500 font-bold text-2xl hover:text-red-700 transition-colors leading-none px-2 rounded-full"
                             aria-label={`Delete case ${caseItem.bookTitle}`}
                         >&times;</button>
+                      </>
                     )}
                 </div>
             </div>
@@ -198,7 +148,7 @@ const AddCaseForm = ({ onAddCase }: { onAddCase: CaseSelectionEvents['onCaseAdd'
 };
 
 export const CaseSelectionView: React.FC<CaseSelectionProps> = ({ user, onSignOut, myCases, publicCases, events }) => {
-    const [sharingCaseId, setSharingCaseId] = useState<string | null>(null);
+    const [settingsCaseId, setSettingsCaseId] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'my' | 'public'>('my');
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -214,7 +164,7 @@ export const CaseSelectionView: React.FC<CaseSelectionProps> = ({ user, onSignOu
         events.onSearchPublic(searchTerm);
     }
 
-    const sharingCase = myCases.find(c => c.id === sharingCaseId);
+    const settingsCase = myCases.find(c => c.id === settingsCaseId);
 
     const renderCasesGrid = (cases: Case[]) => (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -225,7 +175,7 @@ export const CaseSelectionView: React.FC<CaseSelectionProps> = ({ user, onSignOu
                     user={user}
                     onSelect={events.onCaseSelect}
                     onDelete={events.onCaseDelete}
-                    onShare={setSharingCaseId}
+                    onSettings={setSettingsCaseId}
                 />
             ))}
         </div>
@@ -289,7 +239,7 @@ export const CaseSelectionView: React.FC<CaseSelectionProps> = ({ user, onSignOu
                     )
                 )}
             </main>
-            {sharingCase && <ShareModal caseItem={sharingCase} user={user} events={events} onClose={() => setSharingCaseId(null)} />}
+            {settingsCase && <SettingsModal caseItem={settingsCase} events={events} onClose={() => setSettingsCaseId(null)} />}
         </div>
     );
 };

@@ -91,7 +91,7 @@ type NotebookProps = {
   user: PlainUser;
   onSignOut: () => void;
   activeCase: Case;
-  isMember: boolean;
+  isOwner: boolean;
   events: NotebookViewEvents;
   aiState: AiState;
 };
@@ -99,7 +99,7 @@ type NotebookProps = {
 
 type DragState = { noteId: string; offsetX: number; offsetY: number } | null;
 
-export const NotebookComponent = ({ user, onSignOut, activeCase, isMember, events, aiState }: NotebookProps) => {
+export const NotebookComponent = ({ user, onSignOut, activeCase, isOwner, events, aiState }: NotebookProps) => {
   const [noteInput, setNoteInput] = useState('');
   const [activeDrag, setActiveDrag] = useState<DragState>(null);
   const activeElRef = useRef<HTMLElement | null>(null);
@@ -194,7 +194,7 @@ export const NotebookComponent = ({ user, onSignOut, activeCase, isMember, event
             <button onClick={onSignOut} className="py-2 px-4 border-none bg-red-600/80 text-white font-display text-base cursor-pointer rounded-md transition-colors hover:bg-red-700/80">ログアウト</button>
           </div>
       </header>
-      {isMember && (
+      {isOwner && (
           <div className="bg-black/50 p-3 text-center shadow-md z-10 shrink-0">
               <form onSubmit={handleAddNote} className="flex justify-center gap-2.5">
                   <input 
@@ -217,12 +217,12 @@ export const NotebookComponent = ({ user, onSignOut, activeCase, isMember, event
                 note={note} 
                 onMouseDown={handleDragStart}
                 onDelete={events.onNoteDelete}
-                isReadOnly={!isMember}
+                isReadOnly={!isOwner}
             />
           ))}
           {activeCase.notes.length === 0 && (
              <div className="text-center text-slate-500 mt-10 font-display text-2xl">
-                 {isMember ? (
+                 {isOwner ? (
                      <>
                         <p>まだ付箋がありません。</p>
                         <p>上のフォームから新しい考察を追加しましょう。</p>

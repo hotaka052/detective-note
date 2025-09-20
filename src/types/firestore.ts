@@ -25,6 +25,5 @@ export type Case = {
   isPublic: boolean;
   ownerId: string;
   ownerEmail: string;
-  memberEmails: string[];
   notes: Note[];
 };
