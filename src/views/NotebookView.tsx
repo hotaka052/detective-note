@@ -8,11 +8,18 @@ import type { Case, Note, PlainUser } from '../types/index.ts';
 
 const { useState, useEffect, useCallback, useRef } = React;
 
+type AiState = {
+  isLoading: boolean;
+  result: string | null;
+  error: string | null;
+};
+
 type NotebookViewEvents = {
   onNoteAdd: (content: string) => void;
   onNoteDelete: (noteId: string) => void;
   onNoteUpdate: (noteId: string, x: number, y: number) => void;
   onBack: () => void;
+  onAiAnalysis: (type: 'characters' | 'timeline' | 'mysteries') => void;
 };
 
 type NoteProps = {
@@ -48,20 +55,49 @@ const NoteComponent: React.FC<NoteProps> = ({ note, onMouseDown, onDelete }) => 
   );
 };
 
+const AiModal = ({ aiState, onAnalysis, onClose }: { aiState: AiState, onAnalysis: NotebookViewEvents['onAiAnalysis'], onClose: () => void }) => {
+    return (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
+            <div className="bg-[#f5eeda] text-slate-800 rounded-lg shadow-2xl p-6 w-full max-w-2xl m-4 flex flex-col" onClick={e => e.stopPropagation()}>
+                <h3 className="font-display text-2xl mb-4 flex items-center gap-2">
+                   <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" /></svg>
+                    AIアシスタント
+                </h3>
+                <div className="bg-white/50 p-4 rounded mb-4 min-h-[200px] max-h-[50vh] overflow-y-auto font-body">
+                    {aiState.isLoading && <div className="text-center">分析中...</div>}
+                    {aiState.error && <p className="text-red-600">{aiState.error}</p>}
+                    {aiState.result && <p className="whitespace-pre-wrap">{aiState.result}</p>}
+                    {!aiState.isLoading && !aiState.result && !aiState.error && <p className="text-gray-500">上のボタンから分析の種類を選んでください。</p>}
+                </div>
+
+                <div className="flex justify-center gap-2 mb-4">
+                    <button onClick={() => onAnalysis('characters')} disabled={aiState.isLoading} className="disabled:opacity-50 py-2 px-4 border-none bg-[#5a3a22] text-white font-display text-sm cursor-pointer rounded-md transition-colors hover:bg-[#7b5b43]">登場人物を整理</button>
+                    <button onClick={() => onAnalysis('timeline')} disabled={aiState.isLoading} className="disabled:opacity-50 py-2 px-4 border-none bg-[#5a3a22] text-white font-display text-sm cursor-pointer rounded-md transition-colors hover:bg-[#7b5b43]">時系列を整理</button>
+                    <button onClick={() => onAnalysis('mysteries')} disabled={aiState.isLoading} className="disabled:opacity-50 py-2 px-4 border-none bg-[#5a3a22] text-white font-display text-sm cursor-pointer rounded-md transition-colors hover:bg-[#7b5b43]">謎・伏線を抽出</button>
+                </div>
+                <button onClick={onClose} className="mt-2 w-full py-2 px-5 border-none bg-gray-500 text-white font-display text-base cursor-pointer rounded-md transition-colors hover:bg-gray-600">閉じる</button>
+            </div>
+        </div>
+    );
+};
+
+
 type NotebookProps = {
   user: PlainUser;
   onSignOut: () => void;
   activeCase: Case;
   events: NotebookViewEvents;
+  aiState: AiState;
 };
 
 
 type DragState = { noteId: string; offsetX: number; offsetY: number } | null;
 
-export const NotebookComponent = ({ user, onSignOut, activeCase, events }: NotebookProps) => {
+export const NotebookComponent = ({ user, onSignOut, activeCase, events, aiState }: NotebookProps) => {
   const [noteInput, setNoteInput] = useState('');
   const [activeDrag, setActiveDrag] = useState<DragState>(null);
   const activeElRef = useRef<HTMLElement | null>(null);
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
 
   const handleAddNote = (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,12 +175,15 @@ export const NotebookComponent = ({ user, onSignOut, activeCase, events }: Noteb
     <>
       <header className="bg-black/70 p-4 text-white shadow-lg z-10 shrink-0 flex items-center justify-between">
           <div className="w-1/3 flex justify-start">
-             <button onClick={events.onBack} className="py-2 px-4 border-none bg-transparent text-white font-display text-lg cursor-pointer transition-colors hover:bg-white/10 rounded-md">&larr; 事件一覧へ</button>
+             <button onClick={events.onBack} className="py-2 px-4 border-none bg-transparent text-white font-display text-lg cursor-pointer transition-colors hover:bg-white/10 rounded-md">&larr; ボード一覧へ</button>
           </div>
           <div className="w-1/3 text-center">
-             <h2 className="font-display text-3xl text-shadow truncate" title={activeCase.name}>事件: {activeCase.name}</h2>
+             <h2 className="font-display text-3xl text-shadow truncate" title={activeCase.name}>ボード: {activeCase.name}</h2>
           </div>
           <div className="w-1/3 flex justify-end items-center gap-4">
+            <button onClick={() => setIsAiModalOpen(true)} title="AIアシスタント" className="p-2 border-none bg-transparent text-white font-display text-lg cursor-pointer transition-colors hover:bg-white/10 rounded-full">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" /></svg>
+            </button>
             <span className="text-sm truncate" title={user.email ?? ''}>{user.displayName}</span>
             <button onClick={onSignOut} className="py-2 px-4 border-none bg-red-600/80 text-white font-display text-base cursor-pointer rounded-md transition-colors hover:bg-red-700/80">ログアウト</button>
           </div>
@@ -155,12 +194,12 @@ export const NotebookComponent = ({ user, onSignOut, activeCase, events }: Noteb
                   type="text" 
                   value={noteInput}
                   onChange={(e) => setNoteInput(e.target.value)}
-                  placeholder="新しい手がかり..." 
+                  placeholder="新しい考察..." 
                   autoComplete="off" 
                   required 
                   className="w-[300px] py-2 px-3 border border-gray-300 rounded-md text-base font-body focus:ring-2 focus:ring-[#5a3a22] focus:outline-none text-slate-800"
               />
-              <button type="submit" className="py-2 px-5 border-none bg-[#5a3a22] text-white font-display text-base cursor-pointer rounded-md transition-colors hover:bg-[#7b5b43]">メモを追加</button>
+              <button type="submit" className="py-2 px-5 border-none bg-[#5a3a22] text-white font-display text-base cursor-pointer rounded-md transition-colors hover:bg-[#7b5b43]">付箋を追加</button>
           </form>
       </div>
       <main id="notes-container" className="relative flex-grow">
@@ -173,12 +212,13 @@ export const NotebookComponent = ({ user, onSignOut, activeCase, events }: Noteb
             />
           ))}
           {activeCase.notes.length === 0 && (
-             <div className="text-center text-white/70 mt-10 font-display text-2xl">
-                 <p>まだメモがありません。</p>
-                 <p>上のフォームから新しい手がかりを追加しましょう。</p>
+             <div className="text-center text-slate-500 mt-10 font-display text-2xl">
+                 <p>まだ付箋がありません。</p>
+                 <p>上のフォームから新しい考察を追加しましょう。</p>
              </div>
           )}
       </main>
+      {isAiModalOpen && <AiModal aiState={aiState} onAnalysis={events.onAiAnalysis} onClose={() => setIsAiModalOpen(false)} />}
     </>
   );
 };

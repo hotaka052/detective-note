@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+// Fix: Import from firebase/compat/app and firebase/compat/auth for authentication to resolve import errors.
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/auth';
 import { getFirestore } from 'firebase/firestore';
 
 // TODO: Replace the following with your app's Firebase project configuration
@@ -19,8 +20,9 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
+const app = firebase.initializeApp(firebaseConfig);
+// Fix: Use compat auth to resolve import errors, while keeping modular firestore.
+const auth = app.auth();
 const db = getFirestore(app);
 
 export { auth, db };

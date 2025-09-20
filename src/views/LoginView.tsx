@@ -39,8 +39,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ onEmailSignIn, onEmailSign
   return (
     <div className="flex flex-col items-center justify-center h-screen">
       <div className="bg-black/50 p-10 rounded-lg shadow-2xl text-center text-white w-full max-w-md">
-        <h1 className="font-display text-5xl mb-4 text-shadow">探偵のメモ帳</h1>
-        <p className="font-body text-xl mb-8">{isSignUp ? '新しい捜査官として登録' : '事件ファイルにアクセス'}</p>
+        <h1 className="font-display text-5xl mb-4 text-shadow">ミステリーボード</h1>
+        <p className="font-body text-xl mb-8">{isSignUp ? '新しいメンバーとして登録' : '考察ボードにアクセス'}</p>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {isSignUp && (
@@ -48,7 +48,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onEmailSignIn, onEmailSign
               type="text"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="捜査官名 (表示名)"
+              placeholder="表示名"
               required
               className="bg-gray-700/50 text-white p-3 rounded-md border border-gray-600 focus:ring-2 focus:ring-[#5a3a22] focus:outline-none font-body"
             />
@@ -76,7 +76,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onEmailSignIn, onEmailSign
             type="submit"
             className="bg-[#5a3a22] hover:bg-[#7b5b43] text-white font-display text-xl py-3 px-8 rounded-md transition-colors duration-300 shadow-lg mt-2"
           >
-            {isSignUp ? '登録して捜査開始' : 'ログイン'}
+            {isSignUp ? '登録して考察を始める' : 'ログイン'}
           </button>
         </form>
 

@@ -3,24 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>探偵のメモ帳</title>
+    <title>ミステリーボード</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Merriweather:wght@400;700&display=swap" rel="stylesheet">
     
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
         /* Custom styles that are difficult with vanilla Tailwind */
         .corkboard-bg {
-            background-image: url('https://www.transparenttextures.com/patterns/cork-wallet.png');
+            background-color: #f3e9d2;
+            background-image: url('https://www.transparenttextures.com/patterns/old-paper-cascades.png');
         }
         .text-shadow {
-            text-shadow: 2px 2px 4px #000;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
         }
         .note.torn-paper {
+             background-color: #fffacd; /* Light yellow for notes */
              border-bottom-right-radius: 60px 5px;
              border-bottom-left-radius: 5px;
+             border: 1px solid #ddd;
         }
     </style>
     <script>
@@ -29,8 +32,8 @@
             theme: {
                 extend: {
                     fontFamily: {
-                        'display': ['"Special Elite"', 'cursive'],
-                        'body': ['"Kalam"', 'cursive'],
+                        'display': ['"Merriweather"', 'serif'],
+                        'body': ['"Lora"', 'serif'],
                     }
                 }
             }
@@ -46,6 +49,7 @@
     "firebase/app": "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js",
     "firebase/auth": "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js",
     "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js",
+    "@google/genai": "https://esm.sh/@google/genai",
     "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
     "react/": "https://aistudiocdn.com/react@^19.1.1/",
     "firebase/": "https://aistudiocdn.com/firebase@^12.3.0/"

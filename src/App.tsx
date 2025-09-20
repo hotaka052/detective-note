@@ -4,20 +4,15 @@
  */
 
 import * as React from 'react';
-import {
-    onAuthStateChanged,
-    signOut,
-    type User,
-    createUserWithEmailAndPassword,
-    signInWithEmailAndPassword,
-    updateProfile,
-    type AuthError
-} from 'firebase/auth';
+import { GoogleGenAI } from '@google/genai';
+// Fix: Remove modular auth imports as we are using the compat library for authentication.
 import { auth } from './firebase.ts';
 import { 
     loadCases, 
     addCase, 
-    deleteCase, 
+    deleteCase,
+    inviteUserToCase,
+    removeUserFromCase,
     addNote, 
     deleteNote, 
     updateNotePosition 
@@ -29,8 +24,10 @@ import { LoginView } from './views/LoginView.tsx';
 
 const { useState, useEffect, useCallback } = React;
 
-// Fix: The 'AuthError' type from Firebase Auth might not be correctly inferred by TypeScript in all environments.
-// Changing the type to 'any' allows access to the 'code' property without a compile-time error.
+// Initialize the Gemini AI client
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+
 const getFriendlyAuthError = (error: any): string => {
     switch (error.code) {
         case 'auth/invalid-email':
@@ -60,16 +57,23 @@ export const App = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [authError, setAuthError] = useState<string | null>(null);
 
+    // State for AI features
+    const [aiIsLoading, setAiIsLoading] = useState(false);
+    const [aiResult, setAiResult] = useState<string | null>(null);
+    const [aiError, setAiError] = useState<string | null>(null);
+
+
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-            if (currentUser) {
+        // Fix: Use compat version of onAuthStateChanged
+        const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
+            if (currentUser && currentUser.email) {
                 const plainUser: PlainUser = {
                     uid: currentUser.uid,
                     displayName: currentUser.displayName,
                     email: currentUser.email,
                 };
                 setUser(plainUser);
-                const userCases = await loadCases(currentUser.uid);
+                const userCases = await loadCases(currentUser.email);
                 setCases(userCases);
             } else {
                 setUser(null);
@@ -89,28 +93,35 @@ export const App = () => {
         }
         try {
             setAuthError(null);
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            await updateProfile(userCredential.user, { displayName });
+            // Fix: Use compat version of createUserWithEmailAndPassword and updateProfile
+            const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+            if (userCredential.user) {
+                await userCredential.user.updateProfile({ displayName });
+            }
         } catch (error) {
             console.error("Sign up error:", error);
-            setAuthError(getFriendlyAuthError(error as AuthError));
+            // Fix: Remove AuthError type cast as it can no longer be imported.
+            setAuthError(getFriendlyAuthError(error));
         }
     };
 
     const handleEmailSignIn = async (email: string, password: string) => {
         try {
             setAuthError(null);
-            await signInWithEmailAndPassword(auth, email, password);
+            // Fix: Use compat version of signInWithEmailAndPassword
+            await auth.signInWithEmailAndPassword(email, password);
         } catch (error) {
             console.error("Sign in error:", error);
-            setAuthError(getFriendlyAuthError(error as AuthError));
+            // Fix: Remove AuthError type cast as it can no longer be imported.
+            setAuthError(getFriendlyAuthError(error));
         }
     };
 
 
     const handleSignOut = async () => {
         try {
-            await signOut(auth);
+            // Fix: Use compat version of signOut
+            await auth.signOut();
         } catch (error) {
             console.error("Sign out error:", error);
         }
@@ -118,7 +129,7 @@ export const App = () => {
 
     const handleAddCase = async (name: string) => {
         if (!user) return;
-        const newCase = await addCase(user.uid, name);
+        const newCase = await addCase(user, name);
         if (newCase) {
             setCases(prevCases => [...prevCases, newCase]);
         }
@@ -126,14 +137,39 @@ export const App = () => {
 
     const handleDeleteCase = async (id: string) => {
         if (!user) return;
-        if (confirm('この事件ファイルとすべてのメモを完全に削除しますか？')) {
+        const caseToDelete = cases.find(c => c.id === id);
+        if (!caseToDelete) return;
+        if (caseToDelete.ownerId !== user.uid) {
+            alert("このボードのオーナーのみが削除できます。");
+            return;
+        }
+
+        if (confirm('このボードとすべての付箋を完全に削除しますか？この操作は取り消せません。')) {
             await deleteCase(user.uid, id);
             setCases(prevCases => prevCases.filter(c => c.id !== id));
         }
     };
 
+    const handleInviteUser = async (caseId: string, email: string) => {
+        if (!email.trim() || !/^\S+@\S+\.\S+$/.test(email)) {
+            alert("有効なメールアドレスを入力してください。");
+            return;
+        }
+        await inviteUserToCase(caseId, email);
+        setCases(prev => prev.map(c => c.id === caseId ? { ...c, memberEmails: [...c.memberEmails, email] } : c));
+    };
+
+    const handleRemoveUser = async (caseId: string, email: string) => {
+        await removeUserFromCase(caseId, email);
+        setCases(prev => prev.map(c => c.id === caseId ? { ...c, memberEmails: c.memberEmails.filter(m => m !== email) } : c));
+    };
+
     const handleSelectCase = (id: string) => setActiveCaseId(id);
-    const handleBackToCases = () => setActiveCaseId(null);
+    const handleBackToCases = () => {
+        setActiveCaseId(null);
+        setAiResult(null); // Clear AI result when going back
+        setAiError(null);
+    };
 
     const getActiveCase = useCallback(() => {
         return cases.find(c => c.id === activeCaseId);
@@ -154,7 +190,7 @@ export const App = () => {
             rotation: Math.floor(Math.random() * 20) - 10,
         };
 
-        const newNote = await addNote(user.uid, activeCase.id, newNoteData);
+        const newNote = await addNote(activeCase.id, newNoteData);
         if (newNote) {
             setCases(prevCases => prevCases.map(c =>
                 c.id === activeCaseId ? { ...c, notes: [...c.notes, newNote] } : c
@@ -165,7 +201,7 @@ export const App = () => {
     const handleDeleteNote = async (noteId: string) => {
         const activeCase = getActiveCase();
         if (!user || !activeCase) return;
-        await deleteNote(user.uid, activeCase.id, noteId);
+        await deleteNote(activeCase.id, noteId);
         setCases(prevCases => prevCases.map(c =>
             c.id === activeCaseId ? { ...c, notes: c.notes.filter(n => n.id !== noteId) } : c
         ));
@@ -174,14 +210,56 @@ export const App = () => {
     const handleUpdateNotePosition = async (noteId: string, x: number, y: number) => {
         const activeCase = getActiveCase();
         if (!user || !activeCase) return;
-        await updateNotePosition(user.uid, activeCase.id, noteId, x, y);
+        await updateNotePosition(activeCase.id, noteId, x, y);
         setCases(prevCases => prevCases.map(c =>
             c.id === activeCaseId ? { ...c, notes: c.notes.map(n => n.id === noteId ? { ...n, x, y } : n) } : c
         ));
     };
 
+    const handleAiAnalysis = async (type: 'characters' | 'timeline' | 'mysteries') => {
+        const activeCase = getActiveCase();
+        if (!activeCase || activeCase.notes.length === 0) {
+            setAiError("分析する付箋がありません。");
+            setAiResult(null);
+            return;
+        }
+
+        setAiIsLoading(true);
+        setAiResult(null);
+        setAiError(null);
+
+        const notesContent = activeCase.notes.map(n => `- ${n.content}`).join('\n');
+        let prompt = `あなたは優秀なミステリー分析家です。以下の考察メモを分析してください。\n\n[考察メモ]\n${notesContent}\n\n`;
+
+        switch(type) {
+            case 'characters':
+                prompt += "分析結果として、これらのメモに登場する人物をリストアップし、わかっている情報を簡潔にまとめてください。";
+                break;
+            case 'timeline':
+                prompt += "分析結果として、これらのメモから読み取れる出来事を時系列に整理してください。";
+                break;
+            case 'mysteries':
+                prompt += "分析結果として、この物語における未解決の謎や、重要だと思われる伏線をリストアップしてください。";
+                break;
+        }
+
+        try {
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: prompt,
+            });
+            setAiResult(response.text);
+        } catch (error) {
+            console.error("AI analysis error:", error);
+            setAiError("AIアシスタントとの通信に失敗しました。しばらくしてから再度お試しください。");
+        } finally {
+            setAiIsLoading(false);
+        }
+    };
+
+
     if (isLoading) {
-        return <div className="flex items-center justify-center h-screen text-white font-display text-2xl">読み込み中...</div>;
+        return <div className="flex items-center justify-center h-screen text-slate-600 font-display text-2xl">読み込み中...</div>;
     }
 
     if (!user) {
@@ -205,6 +283,12 @@ export const App = () => {
                     onNoteDelete: handleDeleteNote,
                     onNoteUpdate: handleUpdateNotePosition,
                     onBack: handleBackToCases,
+                    onAiAnalysis: handleAiAnalysis,
+                }}
+                aiState={{
+                    isLoading: aiIsLoading,
+                    result: aiResult,
+                    error: aiError,
                 }}
             />
         ) : (
@@ -216,6 +300,8 @@ export const App = () => {
                     onCaseAdd: handleAddCase,
                     onCaseDelete: handleDeleteCase,
                     onCaseSelect: handleSelectCase,
+                    onInviteUser: handleInviteUser,
+                    onRemoveUser: handleRemoveUser,
                 }}
             />
         )

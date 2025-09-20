@@ -21,5 +21,8 @@ export type Note = {
 export type Case = {
   id: string;
   name: string;
+  ownerId: string;
+  ownerEmail: string;
+  memberEmails: string[];
   notes: Note[];
 };
