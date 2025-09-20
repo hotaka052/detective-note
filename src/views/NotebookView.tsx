@@ -4,8 +4,7 @@
  */
 
 import * as React from 'react';
-import type { User } from 'firebase/auth';
-import type { Case, Note } from '../types.ts';
+import type { Case, Note, PlainUser } from '../types.ts';
 
 const { useState, useEffect, useCallback } = React;
 
@@ -50,7 +49,7 @@ const NoteComponent: React.FC<NoteProps> = ({ note, onMouseDown, onDelete }) => 
 };
 
 interface NotebookProps {
-  user: User;
+  user: PlainUser;
   onSignOut: () => void;
   activeCase: Case;
   events: NotebookViewEvents;

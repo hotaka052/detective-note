@@ -4,8 +4,7 @@
  */
 
 import * as React from 'react';
-import type { User } from 'firebase/auth';
-import type { Case } from "../types.ts"
+import type { Case, PlainUser } from "../types.ts"
 
 const { useState } = React;
 
@@ -16,7 +15,7 @@ type CaseSelectionEvents = {
 };
 
 interface CaseSelectionProps {
-    user: User;
+    user: PlainUser;
     onSignOut: () => void;
     cases: Case[];
     events: CaseSelectionEvents;

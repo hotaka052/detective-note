@@ -6,7 +6,7 @@
 // Fix: Import React, ReactDOM, and the App component.
 import * as React from 'react';
 import * as ReactDOM from 'react-dom/client';
-import { App } from './App.tsx';
+import { App } from './src/App.tsx';
 
 const container = document.getElementById('app');
 if (container) {

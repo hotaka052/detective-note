@@ -16,3 +16,10 @@ export interface Case {
   name: string;
   notes: Note[];
 }
+
+// A serializable, plain object representation of a Firebase User.
+export interface PlainUser {
+  uid: string;
+  displayName: string | null;
+  email: string | null;
+}

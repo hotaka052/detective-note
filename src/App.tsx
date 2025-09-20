@@ -4,33 +4,75 @@
  */
 
 import * as React from 'react';
-import { onAuthStateChanged, signInWithPopup, signOut, GoogleAuthProvider, type User } from 'firebase/auth';
+import {
+    onAuthStateChanged,
+    signInWithPopup,
+    signOut,
+    GoogleAuthProvider,
+    type User,
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    updateProfile,
+    type AuthError
+} from 'firebase/auth';
 import { auth } from './firebase.ts';
 import { StorageService } from './storage.ts';
-import type { Case, Note } from './types.ts';
+import type { Case, Note, PlainUser } from './types.ts';
 import { CaseSelectionView } from './views/CaseSelectionView.tsx';
 import { NotebookComponent } from './views/NotebookView.tsx';
 import { LoginView } from './views/LoginView.tsx';
 
 const { useState, useEffect, useCallback } = React;
 
+// Fix: The 'AuthError' type from Firebase Auth might not be correctly inferred by TypeScript in all environments.
+// Changing the type to 'any' allows access to the 'code' property without a compile-time error.
+const getFriendlyAuthError = (error: any): string => {
+    switch (error.code) {
+        case 'auth/invalid-email':
+            return '無効なメールアドレスです。';
+        case 'auth/user-disabled':
+            return 'このアカウントは無効化されています。';
+        case 'auth/user-not-found':
+            return 'ユーザーが見つかりません。メールアドレスを確認してください。';
+        case 'auth/wrong-password':
+            return 'パスワードが間違っています。';
+        case 'auth/email-already-in-use':
+            return 'このメールアドレスは既に使用されています。';
+        case 'auth/weak-password':
+            return 'パスワードは6文字以上である必要があります。';
+        case 'auth/operation-not-allowed':
+             return 'メール・パスワードでのログインは許可されていません。';
+        default:
+            return 'ログインまたは登録中にエラーが発生しました。';
+    }
+}
+
+
 export const App = () => {
-    const [user, setUser] = useState<User | null>(null);
+    const [user, setUser] = useState<PlainUser | null>(null);
     const [cases, setCases] = useState<Case[]>([]);
     const [activeCaseId, setActiveCaseId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [authError, setAuthError] = useState<string | null>(null);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-            setUser(currentUser);
             if (currentUser) {
+                const plainUser: PlainUser = {
+                    uid: currentUser.uid,
+                    displayName: currentUser.displayName,
+                    email: currentUser.email,
+                };
+                setUser(plainUser);
                 const userCases = await StorageService.loadCases(currentUser.uid);
                 setCases(userCases);
             } else {
+                setUser(null);
                 setCases([]);
                 setActiveCaseId(null);
             }
             setIsLoading(false);
+            setAuthError(null); // Clear error on successful auth change
         });
         return () => unsubscribe();
     }, []);
@@ -38,11 +80,39 @@ export const App = () => {
     const handleGoogleSignIn = async () => {
         const provider = new GoogleAuthProvider();
         try {
+            setAuthError(null);
             await signInWithPopup(auth, provider);
         } catch (error) {
             console.error("Authentication error:", error);
+            setAuthError(getFriendlyAuthError(error as AuthError));
         }
     };
+
+    const handleEmailSignUp = async (displayName: string, email: string, password: string) => {
+        if (!displayName.trim()) {
+            setAuthError("表示名を入力してください。");
+            return;
+        }
+        try {
+            setAuthError(null);
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            await updateProfile(userCredential.user, { displayName });
+        } catch (error) {
+            console.error("Sign up error:", error);
+            setAuthError(getFriendlyAuthError(error as AuthError));
+        }
+    };
+
+    const handleEmailSignIn = async (email: string, password: string) => {
+        try {
+            setAuthError(null);
+            await signInWithEmailAndPassword(auth, email, password);
+        } catch (error) {
+            console.error("Sign in error:", error);
+            setAuthError(getFriendlyAuthError(error as AuthError));
+        }
+    };
+
 
     const handleSignOut = async () => {
         try {
@@ -121,7 +191,12 @@ export const App = () => {
     }
 
     if (!user) {
-        return <LoginView onGoogleSignIn={handleGoogleSignIn} />;
+        return <LoginView 
+            onGoogleSignIn={handleGoogleSignIn} 
+            onEmailSignIn={handleEmailSignIn}
+            onEmailSignUp={handleEmailSignUp}
+            authError={authError}
+            />;
     }
 
     const activeCase = getActiveCase();
