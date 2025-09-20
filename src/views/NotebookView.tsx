@@ -6,7 +6,7 @@
 import * as React from 'react';
 import type { Case, Note, PlainUser } from '../types/index.ts';
 
-const { useState, useEffect, useCallback } = React;
+const { useState, useEffect, useCallback, useRef } = React;
 
 type NotebookViewEvents = {
   onNoteAdd: (content: string) => void;
@@ -55,9 +55,13 @@ type NotebookProps = {
   events: NotebookViewEvents;
 };
 
+
+type DragState = { noteId: string; offsetX: number; offsetY: number } | null;
+
 export const NotebookComponent = ({ user, onSignOut, activeCase, events }: NotebookProps) => {
   const [noteInput, setNoteInput] = useState('');
-  const [activeDrag, setActiveDrag] = useState<{ noteId: string; element: HTMLElement; offsetX: number; offsetY: number } | null>(null);
+  const [activeDrag, setActiveDrag] = useState<DragState>(null);
+  const activeElRef = useRef<HTMLElement | null>(null);
 
   const handleAddNote = (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,19 +77,23 @@ export const NotebookComponent = ({ user, onSignOut, activeCase, events }: Noteb
     
     element.classList.add('cursor-grabbing', 'shadow-[15px_15px_25px_rgba(0,0,0,0.6)]', 'z-[999]');
     
-    const containerRect = (document.getElementById('notes-container') as HTMLElement).getBoundingClientRect();
+    const container = document.getElementById('notes-container') as HTMLElement;
+    if (!container) return;
+
+    const containerRect = container.getBoundingClientRect();
     const rect = element.getBoundingClientRect();
+
+    activeElRef.current = element;
 
     setActiveDrag({
         noteId: note.id,
-        element: element,
         offsetX: e.clientX - rect.left + containerRect.left,
         offsetY: e.clientY - rect.top + containerRect.top,
     });
   };
 
   const handleDragMove = useCallback((e: MouseEvent) => {
-    if (!activeDrag) return;
+    if (!activeDrag || !activeElRef.current) return;
     e.preventDefault();
 
     const container = document.getElementById('notes-container') as HTMLElement;
@@ -95,22 +103,23 @@ export const NotebookComponent = ({ user, onSignOut, activeCase, events }: Noteb
     let newX = e.clientX - activeDrag.offsetX;
     let newY = e.clientY - activeDrag.offsetY;
     
-    newX = Math.max(0, Math.min(newX, containerRect.width - activeDrag.element.offsetWidth));
-    newY = Math.max(0, Math.min(newY, containerRect.height - activeDrag.element.offsetHeight));
+    newX = Math.max(0, Math.min(newX, containerRect.width - activeElRef.current.offsetWidth));
+    newY = Math.max(0, Math.min(newY, containerRect.height - activeElRef.current.offsetHeight));
     
-    activeDrag.element.style.left = `${newX}px`;
-    activeDrag.element.style.top = `${newY}px`;
+    activeElRef.current.style.left = `${newX}px`;
+    activeElRef.current.style.top = `${newY}px`;
   }, [activeDrag]);
   
   const handleDragEnd = useCallback(() => {
-    if (!activeDrag) return;
+    if (!activeDrag || !activeElRef.current) return;
     
-    activeDrag.element.classList.remove('cursor-grabbing', 'shadow-[15px_15px_25px_rgba(0,0,0,0.6)]', 'z-[999]');
+    activeElRef.current.classList.remove('cursor-grabbing', 'shadow-[15px_15px_25px_rgba(0,0,0,0.6)]', 'z-[999]');
     
-    const x = parseInt(activeDrag.element.style.left, 10);
-    const y = parseInt(activeDrag.element.style.top, 10);
+    const x = parseInt(activeElRef.current.style.left, 10);
+    const y = parseInt(activeElRef.current.style.top, 10);
     events.onNoteUpdate(activeDrag.noteId, x, y);
     
+    activeElRef.current = null;
     setActiveDrag(null);
   }, [activeDrag, events]);
   
