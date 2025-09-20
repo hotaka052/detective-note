@@ -4,7 +4,7 @@
  */
 
 export interface Note {
-  id: number;
+  id: string;
   content: string;
   x: number;
   y: number;
@@ -12,7 +12,7 @@ export interface Note {
 }
 
 export interface Case {
-  id: number;
+  id: string;
   name: string;
   notes: Note[];
 }

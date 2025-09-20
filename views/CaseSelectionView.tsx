@@ -3,27 +3,29 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-// Fix: Import React and the Case type to conform to module standards.
 import * as React from 'react';
+import type { User } from 'firebase/auth';
 import type { Case } from "../types.ts"
 
 const { useState } = React;
 
 type CaseSelectionEvents = {
   onCaseAdd: (name: string) => void;
-  onCaseDelete: (caseId: number) => void;
-  onCaseSelect: (caseId: number) => void;
+  onCaseDelete: (caseId: string) => void;
+  onCaseSelect: (caseId: string) => void;
 };
 
 interface CaseSelectionProps {
+    user: User;
+    onSignOut: () => void;
     cases: Case[];
     events: CaseSelectionEvents;
 }
 
 interface CaseCardProps {
     caseItem: Case;
-    onSelect: (id: number) => void;
-    onDelete: (id: number) => void;
+    onSelect: (id: string) => void;
+    onDelete: (id: string) => void;
 }
 
 const CaseCard: React.FC<CaseCardProps> = ({ caseItem, onSelect, onDelete }) => {
@@ -50,8 +52,7 @@ const CaseCard: React.FC<CaseCardProps> = ({ caseItem, onSelect, onDelete }) => 
     );
 };
 
-// Fix: Export the component to make it accessible from other modules.
-export const CaseSelectionView: React.FC<CaseSelectionProps> = ({ cases, events }) => {
+export const CaseSelectionView: React.FC<CaseSelectionProps> = ({ user, onSignOut, cases, events }) => {
     const [caseNameInput, setCaseNameInput] = useState('');
 
     const handleAddCase = (e: React.FormEvent) => {
@@ -65,8 +66,18 @@ export const CaseSelectionView: React.FC<CaseSelectionProps> = ({ cases, events 
 
     return (
         <>
-            <header className="bg-black/70 p-5 text-center shadow-lg z-10 shrink-0">
-                <h1 className="font-display text-white text-4xl mb-4 text-shadow">事件ファイル一覧</h1>
+            <header className="bg-black/70 p-4 text-white shadow-lg z-10 shrink-0 flex items-center justify-between">
+                <div className='w-1/3'>
+                     <span className="text-sm" title={user.email ?? ''}>ようこそ, {user.displayName} さん</span>
+                </div>
+                <div className="w-1/3 text-center">
+                    <h1 className="font-display text-4xl text-shadow">事件ファイル一覧</h1>
+                </div>
+                <div className='w-1/3 flex justify-end'>
+                    <button onClick={onSignOut} className="py-2 px-4 border-none bg-red-600/80 text-white font-display text-base cursor-pointer rounded-md transition-colors hover:bg-red-700/80">ログアウト</button>
+                </div>
+            </header>
+             <div className="bg-black/50 p-4 text-center shadow-md z-10 shrink-0">
                 <form onSubmit={handleAddCase} className="flex justify-center gap-2.5">
                     <input 
                         type="text" 
@@ -75,11 +86,11 @@ export const CaseSelectionView: React.FC<CaseSelectionProps> = ({ cases, events 
                         placeholder="新しい事件名..." 
                         autoComplete="off" 
                         required 
-                        className="w-[300px] py-2.5 px-4 border border-gray-300 rounded-md text-base font-body focus:ring-2 focus:ring-[#5a3a22] focus:outline-none"
+                        className="w-[300px] py-2.5 px-4 border border-gray-300 rounded-md text-base font-body focus:ring-2 focus:ring-[#5a3a22] focus:outline-none text-slate-800"
                     />
                     <button type="submit" className="py-2.5 px-5 border-none bg-[#5a3a22] text-white font-display text-base cursor-pointer rounded-md transition-colors hover:bg-[#7b5b43]">新しい事件を作成</button>
                 </form>
-            </header>
+            </div>
             <main className="p-8 overflow-y-auto flex-grow">
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                     {cases.map(caseItem => (
@@ -91,6 +102,12 @@ export const CaseSelectionView: React.FC<CaseSelectionProps> = ({ cases, events 
                         />
                     ))}
                 </div>
+                 {cases.length === 0 && (
+                    <div className="text-center text-white/70 mt-10 font-display text-2xl">
+                        <p>事件ファイルはまだありません。</p>
+                        <p>上のフォームから新しい事件を作成しましょう。</p>
+                    </div>
+                )}
             </main>
         </>
     );

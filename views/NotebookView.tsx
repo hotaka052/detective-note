@@ -3,23 +3,23 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-// Fix: Import React and required types to conform to module standards.
 import * as React from 'react';
+import type { User } from 'firebase/auth';
 import type { Case, Note } from '../types.ts';
 
 const { useState, useEffect, useCallback } = React;
 
 type NotebookViewEvents = {
   onNoteAdd: (content: string) => void;
-  onNoteDelete: (noteId: number) => void;
-  onNoteUpdate: (noteId: number, x: number, y: number) => void;
+  onNoteDelete: (noteId: string) => void;
+  onNoteUpdate: (noteId: string, x: number, y: number) => void;
   onBack: () => void;
 };
 
 interface NoteProps {
   note: Note;
   onMouseDown: (e: React.MouseEvent, note: Note) => void;
-  onDelete: (noteId: number) => void;
+  onDelete: (noteId: string) => void;
 }
 
 const NoteComponent: React.FC<NoteProps> = ({ note, onMouseDown, onDelete }) => {
@@ -50,14 +50,15 @@ const NoteComponent: React.FC<NoteProps> = ({ note, onMouseDown, onDelete }) => 
 };
 
 interface NotebookProps {
+  user: User;
+  onSignOut: () => void;
   activeCase: Case;
   events: NotebookViewEvents;
 }
 
-// Fix: Export the component to make it accessible from other modules.
-export const NotebookComponent = ({ activeCase, events }: NotebookProps) => {
+export const NotebookComponent = ({ user, onSignOut, activeCase, events }: NotebookProps) => {
   const [noteInput, setNoteInput] = useState('');
-  const [activeDrag, setActiveDrag] = useState<{ noteId: number; element: HTMLElement; offsetX: number; offsetY: number } | null>(null);
+  const [activeDrag, setActiveDrag] = useState<{ noteId: string; element: HTMLElement; offsetX: number; offsetY: number } | null>(null);
 
   const handleAddNote = (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,10 +129,17 @@ export const NotebookComponent = ({ activeCase, events }: NotebookProps) => {
 
   return (
     <>
-      <header className="bg-black/70 p-5 text-center shadow-lg z-10 shrink-0 flex items-center justify-between">
-          <button onClick={events.onBack} className="py-2 px-4 border-none bg-transparent text-white font-display text-lg cursor-pointer transition-colors hover:bg-white/10 rounded-md">&larr; 事件一覧へ</button>
-          <h2 className="font-display text-white text-3xl text-shadow flex-grow">事件: {activeCase.name}</h2>
-          <div className="w-32"></div> {/* Spacer */}
+      <header className="bg-black/70 p-4 text-white shadow-lg z-10 shrink-0 flex items-center justify-between">
+          <div className="w-1/3 flex justify-start">
+             <button onClick={events.onBack} className="py-2 px-4 border-none bg-transparent text-white font-display text-lg cursor-pointer transition-colors hover:bg-white/10 rounded-md">&larr; 事件一覧へ</button>
+          </div>
+          <div className="w-1/3 text-center">
+             <h2 className="font-display text-3xl text-shadow truncate" title={activeCase.name}>事件: {activeCase.name}</h2>
+          </div>
+          <div className="w-1/3 flex justify-end items-center gap-4">
+            <span className="text-sm truncate" title={user.email ?? ''}>{user.displayName}</span>
+            <button onClick={onSignOut} className="py-2 px-4 border-none bg-red-600/80 text-white font-display text-base cursor-pointer rounded-md transition-colors hover:bg-red-700/80">ログアウト</button>
+          </div>
       </header>
       <div className="bg-black/50 p-3 text-center shadow-md z-10 shrink-0">
           <form onSubmit={handleAddNote} className="flex justify-center gap-2.5">
@@ -142,7 +150,7 @@ export const NotebookComponent = ({ activeCase, events }: NotebookProps) => {
                   placeholder="新しい手がかり..." 
                   autoComplete="off" 
                   required 
-                  className="w-[300px] py-2 px-3 border border-gray-300 rounded-md text-base font-body focus:ring-2 focus:ring-[#5a3a22] focus:outline-none"
+                  className="w-[300px] py-2 px-3 border border-gray-300 rounded-md text-base font-body focus:ring-2 focus:ring-[#5a3a22] focus:outline-none text-slate-800"
               />
               <button type="submit" className="py-2 px-5 border-none bg-[#5a3a22] text-white font-display text-base cursor-pointer rounded-md transition-colors hover:bg-[#7b5b43]">メモを追加</button>
           </form>
@@ -156,6 +164,12 @@ export const NotebookComponent = ({ activeCase, events }: NotebookProps) => {
                 onDelete={events.onNoteDelete}
             />
           ))}
+          {activeCase.notes.length === 0 && (
+             <div className="text-center text-white/70 mt-10 font-display text-2xl">
+                 <p>まだメモがありません。</p>
+                 <p>上のフォームから新しい手がかりを追加しましょう。</p>
+             </div>
+          )}
       </main>
     </>
   );
